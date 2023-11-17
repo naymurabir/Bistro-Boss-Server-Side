@@ -29,6 +29,8 @@ async function run() {
 
         const reviewsCollection = client.db("BistroDB").collection("reviews")
 
+        const cartsCollection = client.db("BistroDB").collection("carts")
+
         //Menus related APIs
         app.get('/menus', async (req, res) => {
             const cursor = menusCollection.find()
@@ -36,11 +38,33 @@ async function run() {
             res.send(result)
         })
 
-
         //Reviews related APIs
         app.get('/reviews', async (req, res) => {
             const cursor = reviewsCollection.find()
             const result = await cursor.toArray()
+            res.send(result)
+        })
+
+        //Carts related APIs
+        app.post('/carts', async (req, res) => {
+            const newCart = req.body
+            const result = await cartsCollection.insertOne(newCart)
+            res.send(result)
+        })
+
+        app.get('/carts', async (req, res) => {
+            let query = {}
+            if (req.query?.email) {
+                query = { email: req.query?.email }
+            }
+            const result = await cartsCollection.find(query).toArray()
+            res.send(result)
+        })
+
+        app.delete('/carts/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await cartsCollection.deleteOne(query)
             res.send(result)
         })
 
