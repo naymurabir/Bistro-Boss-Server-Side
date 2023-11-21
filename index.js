@@ -171,6 +171,32 @@ async function run() {
             res.send(result)
         })
 
+        app.delete('/menus/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await menusCollection.deleteOne(query)
+            res.send(result)
+        })
+
+        app.put('/menus/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const updateItem = req.body
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: {
+                    name: updateItem.name,
+                    category: updateItem.category,
+                    recipe: updateItem.recipe,
+                    price: updateItem.price
+                }
+            }
+            const result = await menusCollection.updateOne(filter, updateDoc, options)
+            res.send(result)
+        })
+
+
+
         // ---------------------------------------------------------
 
         //Reviews related APIs
