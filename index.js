@@ -45,7 +45,7 @@ const verifyToken = async (req, res, next) => {
             return res.status(401).send({ message: "Unauthorized" })
         }
         console.log("The value of token:", decoded);
-        req.body = decoded
+        req.decoded = decoded
         next()
     })
 
@@ -68,7 +68,7 @@ async function run() {
 
         // Use verify admin admin after verifyToken
         const verifyAdmin = async (req, res, next) => {
-            const email = req.body?.email
+            const email = req.decoded?.email
             const query = { email: email }
             const user = await userCollection.findOne(query)
             const isAdmin = user?.role === 'admin'
@@ -86,7 +86,7 @@ async function run() {
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: false,
+                // secure: false,
                 // sameSite: 'none'
 
             }).send({ success: true })
@@ -126,7 +126,7 @@ async function run() {
 
         app.get('/users/admin/:email', verifyToken, async (req, res) => {
             const email = req.params.email
-            if (email !== req.body.email) {
+            if (email !== req.decoded.email) {
                 return res.status(403).send({ message: "unauthorized access" })
             }
             const query = { email: email }
@@ -158,8 +158,13 @@ async function run() {
         })
 
         // ---------------------------------------------------------
-
         //Menus related APIs
+        app.post('/menus', async (req, res) => {
+            const newItem = req.body
+            const result = await menusCollection.insertOne(newItem)
+            res.send(result)
+        })
+
         app.get('/menus', async (req, res) => {
             const cursor = menusCollection.find()
             const result = await cursor.toArray()
