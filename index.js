@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config()
 var cookieParser = require('cookie-parser')
 var jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = process.env.PORT || 5000;
@@ -65,6 +66,8 @@ async function run() {
         const reviewsCollection = client.db("BistroDB").collection("reviews")
 
         const cartsCollection = client.db("BistroDB").collection("carts")
+
+        const paymentsCollection = client.db("BistroDB").collection("payments")
 
         // Use verify admin admin after verifyToken
         const verifyAdmin = async (req, res, next) => {
@@ -233,6 +236,42 @@ async function run() {
 
         // ---------------------------------------------------------
 
+        //PAYMENT INTENT Related APIs
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body
+            const amount = parseInt(price * 100)
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ['card']
+            })
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        })
+
+        app.post('/payments', async (req, res) => {
+            const newPayment = req.body
+            const result = await paymentsCollection.insertOne(newPayment)
+            console.log("Payment info", newPayment);
+
+            const query = {
+                _id: {
+                    $in: newPayment?.cartIds?.map(id => new ObjectId(id))
+                }
+            }
+            const deleteResult = await cartsCollection.deleteMany(query)
+            res.send({ result, deleteResult })
+        })
+
+        app.get('/payments', async (req, res) => {
+            let query = {}
+            if (req.query?.email) {
+                query = { email: req.query?.email }
+            }
+            const result = await paymentsCollection.find(query).toArray()
+            res.send(result)
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
